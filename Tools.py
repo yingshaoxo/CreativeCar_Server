@@ -25,5 +25,10 @@ git fetch --all
 git reset --hard origin/master
 """)
 
+    def service(self):
+        from auto_everything.base import Super
+        s = Super()
+        s.service('test', 'server.py')
+
 py.make_it_runnable()
 py.fire(Tools)

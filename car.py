@@ -135,13 +135,15 @@ def stop(speed=0, delaytime=0):
 
 # rotate camera horizontally
 def rotate_camera_horizontally(degree=90):
+    bias = 1.80
     for i in range(18):
-        pwm_cam_left_or_right_servo.ChangeDutyCycle(1.80 + 100 * degree/1800)
+        pwm_cam_left_or_right_servo.ChangeDutyCycle(bias + 10 * degree/180)
 
 # rotate camera vertically
 def rotate_camera_vertically(degree=90):
+    bias = 1.80
     for i in range(18):
-        pwm_cam_up_or_down_servo.ChangeDutyCycle(1.80 + 100 * degree/1800)
+        pwm_cam_up_or_down_servo.ChangeDutyCycle(bias + 10 * degree/180)
 
 # 超声波函数
 def Distance_test():
@@ -316,21 +318,20 @@ class Car:
         terminal.run_command("motion -b")
 
     def camera_action(self, action_name):
-        right_angle = 90
         if action_name == "reset":
-            rotate_camera_horizontally(right_angle)
-            rotate_camera_vertically(right_angle)
+            rotate_camera_horizontally(90)
+            rotate_camera_vertically(90)
         elif action_name == "left":
             rotate_camera_horizontally(0)
-            rotate_camera_vertically(right_angle)
+            rotate_camera_vertically(90)
         elif action_name == "right":
             rotate_camera_horizontally(180)
-            rotate_camera_vertically(right_angle)
+            rotate_camera_vertically(90)
         elif action_name == "up":
-            rotate_camera_horizontally(right_angle)
+            rotate_camera_horizontally(90)
             rotate_camera_vertically(180)
         elif action_name == "down":
-            rotate_camera_horizontally(right_angle)
+            rotate_camera_horizontally(90)
             rotate_camera_vertically(70)
 
     def stop_camera(self):

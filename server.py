@@ -2,7 +2,8 @@
 # POST: json; like 'action=up, down, left, right, stop'
 from car import Car
 car = Car()
-#car.get_away_from_obstacles(always=True)
+
+car.get_away_from_obstacles()
 car.stop_camera()
 car.start_camera()
 
@@ -19,6 +20,7 @@ def handle_car_request():
             if 'camera_action' in content:
                 car.camera_action(action_name=content['camera_action'])
             return "ok"
+
     elif request.method == "GET":
         return "havn't yet"
 
