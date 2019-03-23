@@ -1,5 +1,5 @@
 # CreativeCar_Server
-a server running at raspberry-pie car.
+a server running at raspberry-pi car.
 
 ### To control it
 https://github.com/yingshaoxo/CreativeCar_Android

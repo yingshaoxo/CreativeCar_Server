@@ -3,9 +3,9 @@
 from car import Car
 car = Car()
 
-car.get_away_from_obstacles()
-car.stop_camera()
-car.start_camera()
+#car.get_away_from_obstacles()
+#car.stop_camera()
+#car.start_camera()
 
 from flask import Flask, request
 app = Flask(__name__)

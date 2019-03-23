@@ -302,6 +302,9 @@ class Car:
             elif action_name == "stop":
                 stop(speed, time)
 
+            time.sleep(0.1)
+            stop(speed, time)
+
     def get_away_from_obstacles(self, ratio=1, always=False):
         if always == False:
             servo_color_carstate(ratio)
