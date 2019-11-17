@@ -1,7 +1,14 @@
-// -----------------------------------------------
-// -----------------------------------------------
-// -----------------------------------------------
-// -----------------------------------------------
+/**
+* @par Copyright (C): 2010-2019, Shenzhen Yahboom Tech
+* @file         tracking.c
+* @author       Danny
+* @version      V1.0
+* @date         2017.07.26
+* @brief        巡线实验
+* @details
+* @par History  见如下说明
+*
+*/
 int Left_motor_go = 8;   //左电机前进 AIN1
 int Left_motor_back = 7; //左电机后退 AIN2
 
@@ -14,10 +21,12 @@ int Right_motor_pwm = 5; //右电机控速 PWMB
 int key = A0; //定义按键为arduino的模拟口A0
 
 //循迹红外引脚定义
-const int TrackSensorLeftPin1 = 13;  
-const int TrackSensorLeftPin2 = 10;  
-const int TrackSensorRightPin1 = 11; 
-const int TrackSensorRightPin2 = 12; 
+//TrackSensorLeftPin1 TrackSensorLeftPin2 TrackSensorRightPin1 TrackSensorRightPin2
+//      A2                  A1                  A3                   A4
+const int TrackSensorLeftPin1 = A2;  //定义左边第一个循迹红外传感器引脚为A2
+const int TrackSensorLeftPin2 = A1;  //定义左边第二个循迹红外传感器引脚为A1
+const int TrackSensorRightPin1 = A3; //定义右边第一个循迹红外传感器引脚为A3
+const int TrackSensorRightPin2 = A4; //定义右边第二个循迹红外传感器引脚为A4
 
 //定义各个循迹红外引脚采集的数据的变量
 int A;
@@ -27,50 +36,6 @@ int D;
 
 const int black = 1;
 const int white = 0;
-
-// -----------------------------------------------
-// -----------------------------------------------
-// -----------------------------------------------
-// -----------------------------------------------
-
-const int Left_Echo = A2;
-const int Left_Triger = A1;
-const int Right_Echo = A4;
-const int Right_Triger = A3;
-
-void init_ultrasonic_sensor()
-{
-    pinMode(Left_Echo, INPUT);     // 定义超声波输入脚
-    pinMode(Left_Triger, OUTPUT);  // 定义超声波输出脚
-    pinMode(Right_Echo, INPUT);    // 定义超声波输入脚
-    pinMode(Right_Triger, OUTPUT); // 定义超声波输出脚
-}
-
-int get_left_distance() // 量出前方距离
-{
-    digitalWrite(Left_Triger, LOW); // 给触发脚低电平2μs
-    delayMicroseconds(2);
-    digitalWrite(Left_Triger, HIGH); // 给触发脚高电平10μs，这里至少是10μs
-    delayMicroseconds(15);
-    digitalWrite(Left_Triger, LOW);             // 持续给触发脚低电
-    float Fdistance = pulseIn(Left_Echo, HIGH); // 读取高电平时间(单位：微秒)
-    Fdistance = Fdistance / 58;                 //为什么除以58等于厘米，  Y米=（X秒*344）/2
-    // X秒=（ 2*Y米）/344 ==》X秒=0.0058*Y米 ==》厘米=微秒/58
-    return Fdistance;
-}
-
-int get_right_distance() // 量出前方距离
-{
-    digitalWrite(Right_Triger, LOW); // 给触发脚低电平2μs
-    delayMicroseconds(2);
-    digitalWrite(Right_Triger, HIGH); // 给触发脚高电平10μs，这里至少是10μs
-    delayMicroseconds(15);
-    digitalWrite(Right_Triger, LOW);             // 持续给触发脚低电
-    float Fdistance = pulseIn(Right_Echo, HIGH); // 读取高电平时间(单位：微秒)
-    Fdistance = Fdistance / 58;                  //为什么除以58等于厘米，  Y米=（X秒*344）/2
-    // X秒=（ 2*Y米）/344 ==》X秒=0.0058*Y米 ==》厘米=微秒/58
-    return Fdistance;
-}
 
 /**
 * Function       setup
@@ -109,7 +74,6 @@ void setup()
 
     //调用按键扫描函数
     Serial.begin(9600); // open the serial port at 9600 bps:
-    init_ultrasonic_sensor();
     //key_scan();
 }
 
@@ -319,9 +283,9 @@ void loop()
     //检测到黑线时循迹模块相应的指示灯亮，端口电平为LOW
     //未检测到黑线时循迹模块相应的指示灯灭，端口电平为HIGH
     A = digitalRead(TrackSensorLeftPin1);
-    B = digitalRead(TrackSensorLeftPin2);
+    B = digitalRead(TrackSensorRightPin2);
     C = digitalRead(TrackSensorRightPin1);
-    D = digitalRead(TrackSensorRightPin2);
+    D = digitalRead(TrackSensorLeftPin2);
 
     Serial.print("A: "); 
     Serial.print(A); 
@@ -343,16 +307,6 @@ void loop()
     Serial.print("---------------------------------------"); 
     Serial.print("\n"); 
     Serial.print("\n"); 
-
-    Serial.print("left_Distance:");    //输出距离（单位：厘米）
-    Serial.print(get_left_distance()); //显示距离
-    Serial.println("cm");              //显示
-
-    Serial.println(""); //显示
-
-    Serial.print("right_Distance:");    //输出距离（单位：厘米）
-    Serial.print(get_right_distance()); //显示距离
-    Serial.println("cm");               //显示
 
     delay(500);
 
@@ -391,5 +345,5 @@ void loop()
         Serial.println("go right");
         delay(30);
     }
-    */
+*/
 }
