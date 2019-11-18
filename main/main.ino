@@ -14,16 +14,24 @@ int Right_motor_pwm = 5; //右电机控速 PWMB
 int key = A0; //定义按键为arduino的模拟口A0
 
 //循迹红外引脚定义
-const int TrackSensorLeftPin1 = 13;  
-const int TrackSensorLeftPin2 = 10;  
-const int TrackSensorRightPin1 = 11; 
-const int TrackSensorRightPin2 = 12; 
+const int TrackSensorLeftPin1 = 13;
+const int TrackSensorLeftPin2 = 10;
+const int TrackSensorRightPin1 = 11;
+const int TrackSensorRightPin2 = 12;
 
 //定义各个循迹红外引脚采集的数据的变量
 int A;
 int B;
 int C;
 int D;
+
+void update_ABCD()
+{
+    A = digitalRead(TrackSensorLeftPin1);
+    B = digitalRead(TrackSensorLeftPin2);
+    C = digitalRead(TrackSensorRightPin1);
+    D = digitalRead(TrackSensorRightPin2);
+}
 
 const int black = 1;
 const int white = 0;
@@ -37,6 +45,9 @@ const int Left_Echo = A2;
 const int Left_Triger = A1;
 const int Right_Echo = A4;
 const int Right_Triger = A3;
+
+int left_distance;
+int right_distance;
 
 void init_ultrasonic_sensor()
 {
@@ -110,7 +121,7 @@ void setup()
     //调用按键扫描函数
     Serial.begin(9600); // open the serial port at 9600 bps:
     init_ultrasonic_sensor();
-    //key_scan();
+    //wait_for_key_action();
 }
 
 /**
@@ -124,16 +135,29 @@ void setup()
 * @retval        void
 * @par History   无
 */
-void run(int left_speed, int right_speed)
+void go_straight(int left_speed, int right_speed)
 {
     //左电机前进
-    digitalWrite(Left_motor_go, LOW);  //左电机前进使能
+    digitalWrite(Left_motor_go, LOW);    //左电机前进使能
     digitalWrite(Left_motor_back, HIGH); //左电机后退禁止
     analogWrite(Left_motor_pwm, left_speed);
 
     //右电机前进
-    digitalWrite(Right_motor_go, LOW);  //右电机前进使能
+    digitalWrite(Right_motor_go, LOW);    //右电机前进使能
     digitalWrite(Right_motor_back, HIGH); //右电机后退禁止
+    analogWrite(Right_motor_pwm, right_speed);
+}
+
+void go_back(int left_speed, int right_speed)
+{
+    //左电机前进
+    digitalWrite(Left_motor_go, HIGH);
+    digitalWrite(Left_motor_back, LOW);
+    analogWrite(Left_motor_pwm, left_speed);
+
+    //右电机前进
+    digitalWrite(Right_motor_go, HIGH);
+    digitalWrite(Right_motor_back, LOW);
     analogWrite(Right_motor_pwm, right_speed);
 }
 
@@ -147,14 +171,14 @@ void run(int left_speed, int right_speed)
 * @retval        void
 * @par History   无
 */
-void brake(int time)
+void stop(int time)
 {
     digitalWrite(Left_motor_go, LOW);
     digitalWrite(Left_motor_back, LOW);
     digitalWrite(Right_motor_go, LOW);
     digitalWrite(Right_motor_back, LOW);
 
-    delay(time * 100);
+    delay(time);
 }
 
 /**
@@ -206,7 +230,7 @@ void right(int left_speed, int right_speed)
 }
 
 /**
-* Function       spin_left
+* Function       left_rotate
 * @author        Danny
 * @date          2017.07.25
 * @brief         小车原地左转(左轮后退，右轮前进)
@@ -216,7 +240,7 @@ void right(int left_speed, int right_speed)
 * @retval        void
 * @par History   无
 */
-void spin_left(int left_speed, int right_speed)
+void left_rotate(int left_speed, int right_speed)
 {
     //左电机后退
     digitalWrite(Left_motor_go, LOW);    //左电机前进禁止
@@ -230,7 +254,7 @@ void spin_left(int left_speed, int right_speed)
 }
 
 /**
-* Function       spin_right
+* Function       right_rotate
 * @author        Danny
 * @date          2017.07.25
 * @brief         小车原地右转(右轮后退，左轮前进)
@@ -240,7 +264,7 @@ void spin_left(int left_speed, int right_speed)
 * @retval        void
 * @par History   无
 */
-void spin_right(int left_speed, int right_speed)
+void right_rotate(int left_speed, int right_speed)
 {
     //左电机前进
     digitalWrite(Left_motor_go, HIGH);  //左电机前进使能
@@ -288,7 +312,7 @@ void back(int time)
 * @retval        void
 * @par History   无
 */
-void key_scan()
+void wait_for_key_action()
 {
     while (digitalRead(key))
         ;                     //当按键没有被按下一直循环
@@ -304,92 +328,256 @@ void key_scan()
     }
 }
 
-/**
-* Function       loop
-* @author        Danny
-* @date          2017.07.25
-* @brief         先调用setup初始化配置里面的按键扫描函数，
-*                循迹模式开启
-* @param[in]     void
-* @retval        void
-* @par History   无
-*/
+const int distance_threshold = 40;
+
+const int normal_speed = 120;//120; //60;
+const int gentle_speed = 30;
+unsigned int counter = 0;
+unsigned int max_counting = 10000 * 1.5;
+unsigned int second_max_counting = max_counting * 1.5;
+unsigned int max_counting_for_pure_white = max_counting * 3;
+int times_we_met_pure_white = 0;
+
 void loop()
 {
-    //检测到黑线时循迹模块相应的指示灯亮，端口电平为LOW
-    //未检测到黑线时循迹模块相应的指示灯灭，端口电平为HIGH
-    A = digitalRead(TrackSensorLeftPin1);
-    B = digitalRead(TrackSensorLeftPin2);
-    C = digitalRead(TrackSensorRightPin1);
-    D = digitalRead(TrackSensorRightPin2);
+    update_ABCD();
 
-    Serial.print("A: "); 
-    Serial.print(A); 
-    Serial.print("\n"); 
+    Serial.print("A: ");
+    Serial.print(A);
+    Serial.print("\n");
 
-    Serial.print("B: "); 
-    Serial.print(B); 
-    Serial.print("\n"); 
+    Serial.print("B: ");
+    Serial.print(B);
+    Serial.print("\n");
 
-    Serial.print("C: "); 
-    Serial.print(C); 
-    Serial.print("\n"); 
+    Serial.print("C: ");
+    Serial.print(C);
+    Serial.print("\n");
 
-    Serial.print("D: "); 
-    Serial.print(D); 
-    Serial.print("\n"); 
+    Serial.print("D: ");
+    Serial.print(D);
+    Serial.print("\n");
 
-    Serial.print("\n"); 
-    Serial.print("---------------------------------------"); 
-    Serial.print("\n"); 
-    Serial.print("\n"); 
+    Serial.print("\n");
+    Serial.print("---------------------------------------");
+    Serial.print("\n");
+    Serial.print("\n");
 
-    Serial.print("left_Distance:");    //输出距离（单位：厘米）
-    Serial.print(get_left_distance()); //显示距离
-    Serial.println("cm");              //显示
+    Serial.print("left_Distance:"); //输出距离（单位：厘米）
+    left_distance = get_left_distance();
+    Serial.print(left_distance); //显示距离
+    Serial.println("cm");        //显示
 
     Serial.println(""); //显示
 
-    Serial.print("right_Distance:");    //输出距离（单位：厘米）
-    Serial.print(get_right_distance()); //显示距离
-    Serial.println("cm");               //显示
+    Serial.print("right_Distance:"); //输出距离（单位：厘米）
+    right_distance = get_right_distance();
+    Serial.print(right_distance); //显示距离
+    Serial.println("cm");         //显示
 
-    delay(500);
+    //delay(500);
 
-/*
+    /*
+    if (left_distance < distance_threshold)
+    {
+        right_rotate(gentle_speed, gentle_speed);
+        Serial.println("go right");
+        delay(80);
+    }
+    else if (right_distance < distance_threshold)
+    {
+        left_rotate(gentle_speed, gentle_speed);
+        Serial.println("go left");
+        delay(80);
+    }
+    */
+   ///*
+    if (A == black && D == white)
+    {
+        counter = 0;
+        while (!(B == black || C == black))
+        {
+            left_rotate(gentle_speed, gentle_speed);
+            update_ABCD();
+            counter = counter + 1;
+            if (counter > max_counting)
+            {
+                stop(100);
+                break;
+            }
+        }
+
+        counter = 0;
+        while (!(B == black || C == black))
+        {
+            right_rotate(gentle_speed, gentle_speed);
+            update_ABCD();
+            counter = counter + 1;
+            if (counter > second_max_counting)
+            {
+                stop(100);
+                break;
+            }
+        }
+    }
+    else if (A == white && D == black)
+    {
+        counter = 0;
+        while (!(B == black || C == black))
+        {
+            right_rotate(gentle_speed, gentle_speed);
+            update_ABCD();
+            counter = counter + 1;
+            if (counter > max_counting)
+            {
+                stop(100);
+                break;
+            }
+        }
+
+        counter = 0;
+        while (!(B == black || C == black))
+        {
+            left_rotate(gentle_speed, gentle_speed);
+            update_ABCD();
+            counter = counter + 1;
+            if (counter > second_max_counting)
+            {
+                stop(100);
+                break;
+            }
+        }
+    }
+    else if (A == white && B == white && C == white && D == white)
+    {
+        counter = 0;
+        while (A == white && B == white && C == white && D == white)
+        {
+            counter = counter + 1;
+            go_straight(gentle_speed, gentle_speed);
+            update_ABCD();
+            if (counter > max_counting_for_pure_white)
+            {
+                stop(1000);
+                times_we_met_pure_white = times_we_met_pure_white + 1;
+                if (times_we_met_pure_white >= 2)
+                {
+                    wait_for_key_action();
+                }
+                break;
+            }
+        }
+
+        counter = 0;
+        while (A == white && B == white && C == white && D == white)
+        {
+            counter = counter + 1;
+            go_back(gentle_speed, gentle_speed);
+            update_ABCD();
+            if (counter > max_counting_for_pure_white*1.5)
+            {
+                stop(1000);
+                //wait_for_key_action();
+                break;
+            }
+        }
+    }
+    else
+    {
+        go_straight(normal_speed, normal_speed);
+    }
+//    */
+
+    /* new 1
+    if (A == black && D == white)
+    {
+        left_rotate(normal_speed, normal_speed);
+        Serial.println("go left");
+        delay(80);
+    }
+    else if (A == white && D == black)
+    {
+        right_rotate(normal_speed, normal_speed);
+        Serial.println("go right");
+        delay(80);
+    }
+    else if (B == black && C == black)
+    {
+        go_straight(normal_speed, normal_speed);
+        Serial.println("go starght");
+        delay(30);
+    }
+    else if (B == black && C == white) {
+        left_rotate(gentle_speed, gentle_speed);
+        Serial.println("go left softly");
+        delay(30);
+    }
+    else if (B == white && C == black) {
+        right_rotate(gentle_speed, gentle_speed);
+        Serial.println("go right softly");
+        delay(30);
+
+        go_straight(gentle_speed, gentle_speed);
+        Serial.println("go starght softly");
+        delay(30);
+    }
+    else
+    {
+        go_straight(gentle_speed, gentle_speed);
+        Serial.println("go starght softly");
+        delay(30);
+    }
+    */
+
+    //  yesterday
+    /*
     if (A == white && D == white)
     {
-        run(100, 100);
+        go_straight(100, 100);
         Serial.println("go starght");
-        delay(80);
-    } else if (A == white && D == white && B == black) {
-        run(100, 100);
+        //delay(80);
+    }
+    else if (A == white && D == white && B == black)
+    {
+        go_straight(100, 100);
         Serial.println("go starght");
-        delay(80);
-    } else if (A == white && D == white && C == black) {
-        run(100, 100);
+        //delay(80);
+    }
+    else if (A == white && D == white && C == black)
+    {
+        go_straight(100, 100);
         Serial.println("go starght");
-        delay(80);
-    } else if (B == black && C == black) {
-        run(100, 100);
+        //delay(80);
+    }
+    else if (B == black && C == black)
+    {
+        go_straight(100, 100);
         Serial.println("go starght");
-        delay(80);
-    } else if (A == black && D == white) {
-        spin_left(60, 60);
+        //delay(80);
+    }
+    else if (A == black && D == white)
+    {
+        left_rotate(60, 60);
         Serial.println("go left");
-        delay(80);
-    } else if (A == white && D == black) {
-        spin_right(60, 60);
+        //delay(80);
+    }
+    else if (A == white && D == black)
+    {
+        right_rotate(60, 60);
         Serial.println("go right");
-        delay(80);
-    } else if (B == black && C == white) {
-        spin_left(60, 60);
+        //delay(80);
+    }
+    else if (B == black && C == white)
+    {
+        left_rotate(60, 60);
         Serial.println("go left");
-        delay(30);
-    } else if (B == white && C == black) {
-        spin_right(60, 60);
+        //delay(30);
+    }
+    else if (B == white && C == black)
+    {
+        right_rotate(60, 60);
         Serial.println("go right");
-        delay(30);
+        //delay(30);
     }
     */
 }
