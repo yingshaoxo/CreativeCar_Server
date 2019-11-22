@@ -11,16 +11,28 @@ int mode = 0;
 #define FOLLOWING_LINE 1
 #define NO_LINE 2
 
-const int iniMotorPower = 100;
+/*
+const int initial_MotorPower_for_go_straight = 130;
+const int initial_MotorPower_for_turning = 100;
+*/
+///*
+const int initial_MotorPower_for_go_straight = 200;
+const int initial_MotorPower_for_turning = 30;
+//*/
 
 // PID controller
-float Kp = 0.2;
-float Ki = 0.00001;
-float Kd = 0.02;
+float Kp = 0.17;
+float Ki = 0;     //0.00001;
+float Kd = 0.001; //0.02;
 /*
 float Kp = 0.2;
 float Ki = 0.00001;
 float Kd = 0.01;
+*/
+/*
+float Kp = 0.2;
+float Ki = 0.00001;
+float Kd = 0.02;
 */
 
 float error = 0, P_value = 0, I_value = 0, D_value = 0, PIDvalue = 0;
@@ -242,55 +254,103 @@ Sensor Array 	Error Value
 0 0 0 0 0        0 Robot found no line: turn 180o
 
 */
+
+/* read line sensors values 
+
+black = 1;
+white = 0;
+
+Sensor Array 	Error Value
+0 0 (0&0) 0 1	 4              
+0 0 (0&0) 1 1	 3              
+0 0 (0&0) 1 0	 2              
+0 0 (0&1) 1 0	 1              
+0 0 (0&1) 0 0    0.5
+
+0 0 (1&1) 0 0	 0              
+
+0 0 (1&0) 0 0   -0.5
+0 1 (1&0) 0 0	-1              
+0 1 (0&0) 0 0	-2              
+1 1 (0&0) 0 0	-3              
+1 0 (0&0) 0 0	-4              
+
+1 1 1 1 1        0 Robot found continuous line : STOPPED
+0 0 0 0 0        0 Robot found no line: turn 180o
+
+*/
+
+/*
+const int normal_speed = 150; //150; //120;
+const int gentle_speed = 40;  //30;  //30;
+unsigned int counter = 0;
+unsigned int max_counting = 10000 * 1.5;
+unsigned int second_max_counting = max_counting * 1.5;
+unsigned int max_counting_for_pure_white = max_counting * 3;
+int times_we_met_pure_white = 0;
+
+const int black = 1;
+const int white = 0;
+*/
+
 void update_errors()
 {
-    /*
-    if ((A == 0) && (B == 0) && (C == 0) && (D == 0) && (E == 1))
+    if ((A == 0) && (B == 0) && ((C == 0) && (D == 0)) && (E == 0) && (F == 1))
     {
         mode = FOLLOWING_LINE;
-        error = 4;
+        error = 0.4;
     }
-    else if ((A == 0) && (B == 0) && (C == 0) && (D == 1) && (E == 1))
+    else if ((A == 0) && (B == 0) && ((C == 0) && (D == 0)) && (E == 1) && (F == 1))
     {
         mode = FOLLOWING_LINE;
-        error = 3;
+        error = 0.3;
     }
-    else if ((A == 0) && (B == 0) && (C == 0) && (D == 1) && (E == 0))
+    else if ((A == 0) && (B == 0) && ((C == 0) && (D == 0)) && (E == 1) && (F == 0))
     {
         mode = FOLLOWING_LINE;
-        error = 2;
+        error = 0.2;
     }
-    else if ((A == 0) && (B == 0) && (C == 1) && (D == 1) && (E == 0))
+    else if ((A == 0) && (B == 0) && ((C == 0) && (D == 1)) && (E == 1) && (F == 0))
     {
         mode = FOLLOWING_LINE;
-        error = 1;
+        error = 0.1;
     }
-    else if ((A == 0) && (B == 0) && (C == 1) && (D == 0) && (E == 0))
+    else if ((A == 0) && (B == 0) && ((C == 0) && (D == 1)) && (E == 0) && (F == 0))
+    {
+        mode = FOLLOWING_LINE;
+        error = 0.01;
+    }
+    else if ((A == 0) && (B == 0) && ((C == 1) && (D == 1)) && (E == 0) && (F == 0))
     {
         mode = FOLLOWING_LINE;
         error = 0;
     }
-    else if ((A == 0) && (B == 1) && (C == 1) && (D == 0) && (E == 0))
+    else if ((A == 0) && (B == 0) && ((C == 1) && (D == 0)) && (E == 0) && (F == 0))
     {
         mode = FOLLOWING_LINE;
-        error = -1;
+        error = -0.01;
     }
-    else if ((A == 0) && (B == 1) && (C == 0) && (D == 0) && (E == 0))
+    else if ((A == 0) && (B == 1) && ((C == 1) && (D == 0)) && (E == 0) && (F == 0))
     {
         mode = FOLLOWING_LINE;
-        error = -2;
+        error = -0.1;
     }
-    else if ((A == 1) && (B == 1) && (C == 0) && (D == 0) && (E == 0))
+    else if ((A == 0) && (B == 1) && ((C == 0) && (D == 0)) && (E == 0) && (F == 0))
     {
         mode = FOLLOWING_LINE;
-        error = -3;
+        error = -0.2;
     }
-    else if ((A == 1) && (B == 0) && (C == 0) && (D == 0) && (E == 0))
+    else if ((A == 1) && (B == 1) && ((C == 0) && (D == 0)) && (E == 0) && (F == 0))
+    {
+        mode = FOLLOWING_LINE;
+        error = -0.3;
+    }
+    else if ((A == 1) && (B == 0) && ((C == 0) && (D == 0)) && (E == 0) && (F == 0))
     {
         mode = FOLLOWING_LINE;
         error = -4;
     }
-    else if ((A == 1) && (B == 1) && ((C == 1) || (D == 1)) && (E == 1) && (F == 1))
+    else if ((A == 1) && (B == 1) && ((C == 1) && (D == 1)) && (E == 1) && (F == 1))
     {
         mode = STOPPED;
         error = 0;
@@ -300,8 +360,8 @@ void update_errors()
         mode = NO_LINE;
         error = 0;
     }
-    */
 
+    /*
     if ((A == 0) && (B == 0) && ((C == 0) && (D == 0)) && (E == 0) && (F == 1))
     {
         mode = FOLLOWING_LINE;
@@ -357,6 +417,7 @@ void update_errors()
         mode = NO_LINE;
         error = 0;
     }
+    */
 }
 
 void print_information()
@@ -414,24 +475,27 @@ void calculatePID()
     previousError = error;
 }
 
-int MotorSpeed = iniMotorPower;
+int MotorSpeed = 0;
 void motorPIDcontrol()
 {
-    if (round(PIDvalue) == 0) {
-        MotorSpeed = iniMotorPower + abs(PIDvalue);
+    if (round(PIDvalue * 10) == 0)
+    {
+        //if (PIDvalue == 0) {
+        MotorSpeed = initial_MotorPower_for_go_straight + abs(PIDvalue);
         constrain(MotorSpeed, 0, 255);
 
         go_straight(MotorSpeed, MotorSpeed);
-    } else if (PIDvalue < 0)
+    }
+    else if (PIDvalue < 0)
     {
-        MotorSpeed = iniMotorPower + abs(PIDvalue);
+        MotorSpeed = initial_MotorPower_for_turning + abs(PIDvalue);
         constrain(MotorSpeed, 0, 255);
 
         left_rotate(MotorSpeed, MotorSpeed);
     }
     else if (PIDvalue > 0)
     {
-        MotorSpeed = iniMotorPower + abs(PIDvalue);
+        MotorSpeed = initial_MotorPower_for_turning + abs(PIDvalue);
         constrain(MotorSpeed, 0, 255);
 
         right_rotate(MotorSpeed, MotorSpeed);
@@ -499,14 +563,4 @@ void loop()
         motorPIDcontrol();
         break;
     }
-
-    /*
-   if (A == 1 && F == 0) {
-       left_rotate(40,40);
-   } else if (A == 0 && F == 1) {
-       right_rotate(40,40);
-   } else {
-       go_straight(120,120);
-   }
-   */
 }
