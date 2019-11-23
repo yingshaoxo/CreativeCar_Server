@@ -300,6 +300,64 @@ void update_errors()
         mode = ALL_WHITE;
         error = 0;
     }
+
+    /*
+    if ((A == 0) && (B == 0) && ((C == 0) && (D == 0)) && (E == 0) && (F == 1))
+    {
+        mode = FOLLOWING_LINE;
+        error = 4;
+    }
+    else if ((A == 0) && (B == 0) && ((C == 0) && (D == 0)) && (E == 1) && (F == 1))
+    {
+        mode = FOLLOWING_LINE;
+        error = 3;
+    }
+    else if ((A == 0) && (B == 0) && ((C == 0) && (D == 0)) && (E == 1) && (F == 0))
+    {
+        mode = FOLLOWING_LINE;
+        error = 2;
+    }
+    else if ((A == 0) && (B == 0) && ((C == 1) || (D == 1)) && (E == 1) && (F == 0))
+    {
+        mode = FOLLOWING_LINE;
+        error = 1;
+    }
+    else if ((A == 0) && (B == 0) && ((C == 1) || (D == 1)) && (E == 0) && (F == 0))
+    {
+        mode = FOLLOWING_LINE;
+        error = 0;
+    }
+    else if ((A == 0) && (B == 1) && ((C == 1) || (D == 1)) && (E == 0) && (F == 0))
+    {
+        mode = FOLLOWING_LINE;
+        error = -1;
+    }
+    else if ((A == 0) && (B == 1) && ((C == 0) && (D == 0)) && (E == 0) && (F == 0))
+    {
+        mode = FOLLOWING_LINE;
+        error = -2;
+    }
+    else if ((A == 1) && (B == 1) && ((C == 0) && (D == 0)) && (E == 0) && (F == 0))
+    {
+        mode = FOLLOWING_LINE;
+        error = -3;
+    }
+    else if ((A == 1) && (B == 0) && ((C == 0) && (D == 0)) && (E == 0) && (F == 0))
+    {
+        mode = FOLLOWING_LINE;
+        error = -4;
+    }
+    else if ((A == 1) && (B == 1) && ((C == 1) || (D == 1)) && (E == 1) && (F == 1))
+    {
+        mode = ALL_BLACK;
+        error = 0;
+    }
+    else if ((A == 0) && (B == 0) && ((C == 0) && (D == 0)) && (C == 0) && (D == 0))
+    {
+        mode = ALL_WHITE;
+        error = 0;
+    }
+    */
 }
 
 void print_information()
@@ -386,41 +444,6 @@ void motorPIDcontrol()
 
 // -----------------------------------------------
 // -----------------------------------------------
-// Timer functions
-// -----------------------------------------------
-// -----------------------------------------------
-
-unsigned int get_live_seconds()
-{
-    return millis() / 1000;
-}
-
-int full_white_report_in_a_second = 0;
-int seconds_for_full_white = 0;
-int temp_seconds_for_full_white = 0;
-int a_full_white_report()
-{
-    full_white_report_in_a_second++;
-
-    temp_seconds_for_full_white = get_live_seconds();
-    if (temp_seconds_for_full_white > seconds_for_full_white)
-    {
-        seconds_for_full_white = temp_seconds_for_full_white;
-        full_white_report_in_a_second = 0;
-    }
-
-    if (full_white_report_in_a_second > 200)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-// -----------------------------------------------
-// -----------------------------------------------
 // Ultrasonic sensor functions
 // -----------------------------------------------
 // -----------------------------------------------
@@ -467,38 +490,15 @@ int get_right_distance() // 量出前方距离
     return Fdistance;
 }
 
-void update_distance()
-{
-    left_distance = get_left_distance();
-    right_distance = get_right_distance();
-    constrain(left_distance, 0, 100);
-    constrain(right_distance, 0, 100);
-}
-
 int check_if_we_are_in_tunnel()
 {
-    if (left_distance < 50 && right_distance < 50)
+    if (get_left_distance() < 50 && get_right_distance < 50)
     {
         return 1;
     }
     else
     {
         return 0;
-    }
-}
-
-void adjust_its_position_to_the_center()
-{
-    int middle_value = ((left_distance + right_distance) / 2);
-    if (left_distance < middle_value)
-    {
-        right(initial_MotorPower_for_go_straight / 2);
-        //delay(500);
-    }
-    else if (right_distance < middle_value)
-    {
-        left(initial_MotorPower_for_go_straight / 2);
-        //delay(500);
     }
 }
 
@@ -548,31 +548,12 @@ void loop()
     switch (mode)
     {
     case ALL_BLACK:
-        //stop(1000);
-
+        stop(1000);
         previousError = error;
         break;
 
     case ALL_WHITE:
-        stop(1);
-
-        if (a_full_white_report() == 1)
-        {
-            unsigned int beginning = get_live_seconds();
-            unsigned int current = beginning;
-            while (1)
-            {
-                current = get_live_seconds();
-                update_distance();
-                adjust_its_position_to_the_center();
-
-                if (check_if_we_are_in_tunnel() == 0)
-                {
-                    break;
-                }
-            }
-        }
-
+        //go_straight(iniMotorPower, iniMotorPower);
         previousError = 0;
         break;
 
