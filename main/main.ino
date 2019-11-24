@@ -220,19 +220,6 @@ Sensor Array 	Error Value
 
 */
 
-/*
-const int normal_speed = 150; //150; //120;
-const int gentle_speed = 40;  //30;  //30;
-unsigned int counter = 0;
-unsigned int max_counting = 10000 * 1.5;
-unsigned int second_max_counting = max_counting * 1.5;
-unsigned int max_counting_for_pure_white = max_counting * 3;
-int times_we_met_pure_white = 0;
-
-const int black = 1;
-const int white = 0;
-*/
-
 void update_errors()
 {
     if ((A == 0) && (B == 0) && ((C == 0) && (D == 0)) && (E == 0) && (F == 1))
@@ -362,7 +349,6 @@ void motorPIDcontrol()
 {
     if (round(PIDvalue * 10) == 0)
     {
-        //if (PIDvalue == 0) {
         MotorSpeed = initial_MotorPower_for_go_straight + abs(PIDvalue);
         constrain(MotorSpeed, 0, 255);
 
@@ -395,6 +381,7 @@ unsigned int get_live_seconds()
     return millis() / 1000;
 }
 
+/*
 int full_white_report_in_a_second = 0;
 int seconds_for_full_white = 0;
 int temp_seconds_for_full_white = 0;
@@ -410,6 +397,48 @@ int a_full_white_report()
     }
 
     if (full_white_report_in_a_second > 200)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+*/
+int seconds = 0;
+int temp_seconds = 0;
+
+unsigned int general_report_in_a_second = 0;
+unsigned int full_white_report_in_a_second = 0;
+
+int general_report()
+{
+    general_report_in_a_second++;
+
+    temp_seconds = get_live_seconds();
+    if (temp_seconds > seconds)
+    {
+        seconds = temp_seconds;
+        general_report_in_a_second = 0;
+        full_white_report_in_a_second = 0;
+    }
+}
+
+unsigned int a_full_white_report()
+{
+    full_white_report_in_a_second++;
+
+    temp_seconds = get_live_seconds();
+    if (temp_seconds > seconds)
+    {
+        seconds = temp_seconds;
+        full_white_report_in_a_second = 0;
+    }
+
+    //if (full_white_report_in_a_second > 200)
+    //if (full_white_report_in_a_second > 10 && general_report_in_a_second > 10 && (full_white_report_in_a_second / general_report_in_a_second) > 0.8)
+    if (general_report_in_a_second > 30 && (full_white_report_in_a_second / general_report_in_a_second) > 0.8)
     {
         return 1;
     }
@@ -502,6 +531,50 @@ void adjust_its_position_to_the_center()
     }
 }
 
+void motorPIDcontrol_with_ultrasonic_sensor()
+{
+    if (round(PIDvalue * 10) == 0)
+    {
+        MotorSpeed = initial_MotorPower_for_go_straight + abs(PIDvalue);
+        constrain(MotorSpeed, 0, 255);
+
+        go_straight(MotorSpeed, MotorSpeed);
+    }
+    else if (PIDvalue < 0)
+    {
+        MotorSpeed = initial_MotorPower_for_go_straight / 2 + abs(PIDvalue);
+        constrain(MotorSpeed, 0, 255);
+
+        left(MotorSpeed);
+    }
+    else if (PIDvalue > 0)
+    {
+        MotorSpeed = initial_MotorPower_for_go_straight / 2 + abs(PIDvalue);
+        constrain(MotorSpeed, 0, 255);
+
+        right(MotorSpeed);
+    }
+}
+
+void adjust_its_position_to_the_center_by_PID()
+{
+    int middle_value = ((left_distance + right_distance) / 2);
+
+    if (left_distance < middle_value)
+    {
+        error = 0.5;
+        //right(initial_MotorPower_for_go_straight / 2);
+    }
+    else if (right_distance < middle_value)
+    {
+        error = -0.5;
+        //left(initial_MotorPower_for_go_straight / 2);
+    }
+
+    calculatePID();
+    motorPIDcontrol_with_ultrasonic_sensor();
+}
+
 void setup()
 {
     Serial.begin(9600); // open the serial port at 9600 bps:
@@ -540,6 +613,7 @@ void setup()
     //wait_for_key_action();
 }
 
+int full_white_count = 0;
 void loop()
 {
     update_ABCDEF();
@@ -549,36 +623,89 @@ void loop()
     {
     case ALL_BLACK:
         //stop(1000);
-
         previousError = error;
         break;
 
     case ALL_WHITE:
         stop(1);
 
+        general_report();
         if (a_full_white_report() == 1)
         {
+            previousError = 0;
+            error = 0;
+
+            // when it goes to the second full white, stop ferever
+            stop(1000);
+            full_white_count++;
+            if (full_white_count >= 2)
+            {
+                unsigned int beginning = get_live_seconds();
+                unsigned int current = beginning;
+                while (1) {
+                    go_straight(initial_MotorPower_for_go_straight/2, initial_MotorPower_for_go_straight/2);
+
+                    current = get_live_seconds();
+                    if ((current - beginning) >= 1) {
+                        break;
+                    }
+                }
+                while (1)
+                {
+                    stop(2000);
+                }
+            }
+
+            // when it goes to the first full white, start the ultrasonic_sensor
             unsigned int beginning = get_live_seconds();
             unsigned int current = beginning;
             while (1)
             {
-                current = get_live_seconds();
                 update_distance();
-                adjust_its_position_to_the_center();
+                adjust_its_position_to_the_center_by_PID();
 
-                if (check_if_we_are_in_tunnel() == 0)
+                current = get_live_seconds();
+                if ((current - beginning) >= 6)
                 {
-                    break;
+                    update_ABCDEF();
+                    if (C == 1 || D == 1) // adjust its position until meets black line
+                    {
+                        stop(1000);
+                        break;
+                    }
                 }
             }
         }
 
+        error = 0;
         previousError = 0;
         break;
 
     case FOLLOWING_LINE:
+        general_report();
+
         calculatePID();
         motorPIDcontrol();
         break;
     }
+
+    /*
+    unsigned int beginning = get_live_seconds();
+    unsigned int current = beginning;
+    while (1)
+    {
+        update_distance();
+        adjust_its_position_to_the_center_by_PID();
+
+        current = get_live_seconds();
+        if ((current - beginning) >= 7)
+        {
+            stop(2000);
+            break;
+        }
+    }
+    while (1) {
+        stop(2000);
+    }
+    */
 }
