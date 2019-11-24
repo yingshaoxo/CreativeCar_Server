@@ -636,14 +636,14 @@ void loop()
             error = 0;
 
             // when it goes to the second full white, stop ferever
-            stop(1000);
+            stop(100);
             full_white_count++;
             if (full_white_count >= 2)
             {
                 unsigned int beginning = get_live_seconds();
                 unsigned int current = beginning;
                 while (1) {
-                    go_straight(initial_MotorPower_for_go_straight/2, initial_MotorPower_for_go_straight/2);
+                    go_straight(initial_MotorPower_for_turning*2, initial_MotorPower_for_turning*2);
 
                     current = get_live_seconds();
                     if ((current - beginning) >= 1) {
@@ -670,7 +670,7 @@ void loop()
                     update_ABCDEF();
                     if (C == 1 || D == 1) // adjust its position until meets black line
                     {
-                        stop(1000);
+                        stop(100);
                         break;
                     }
                 }
@@ -688,24 +688,4 @@ void loop()
         motorPIDcontrol();
         break;
     }
-
-    /*
-    unsigned int beginning = get_live_seconds();
-    unsigned int current = beginning;
-    while (1)
-    {
-        update_distance();
-        adjust_its_position_to_the_center_by_PID();
-
-        current = get_live_seconds();
-        if ((current - beginning) >= 7)
-        {
-            stop(2000);
-            break;
-        }
-    }
-    while (1) {
-        stop(2000);
-    }
-    */
 }
