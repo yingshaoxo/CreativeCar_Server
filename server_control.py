@@ -11,6 +11,7 @@ t = Terminal()
 app = Flask(__name__)
 
 State = False
+robot_state = False
 
 
 @app.route('/car', methods=['POST', 'GET'])
@@ -46,18 +47,19 @@ def handle_web_request():
 
 @app.route('/startorstop', methods=['GET'])
 def start_or_stop():
-    global State
-    if State == False:
-        t.run_py("server.py")
+    global robot_state
+    if robot_state == False:
+        t.run_py("robot.py")
         # t.run_py("tracking.py")
-        print('server has started')
-        State = True
+        print('robot has started')
+        robot_state = True
     else:
-        t.kill("server.py")
+        t.kill("robot.py")
         # t.kill("tracking.py")
-        print('server has stoped')
-        State = False
+        print('robot has stoped')
+        robot_state = False
     return render_template("index.html")
+
 
 def white_balance(img):
     result = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -68,6 +70,7 @@ def white_balance(img):
     result = cv2.cvtColor(result, cv2.COLOR_LAB2BGR)
     return result
 
+
 def effect_of_whitening(frame, whiten_level=5.0):
     assert 1 <= whiten_level <= 5, "whiten_level must belongs to [1, 5]"
 
@@ -76,6 +79,7 @@ def effect_of_whitening(frame, whiten_level=5.0):
     new_frame = (255 * (np.log((frame * magic_number) *
                                (whiten_level-1) + 1) / a)).astype(np.uint8)
     return new_frame
+
 
 @app.route('/takepicture', methods=['GET'])
 def take_picture():
