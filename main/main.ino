@@ -15,7 +15,7 @@ int mode = 0;
 const int initial_MotorPower_for_go_straight = 130;
 const int initial_MotorPower_for_turning = 100;
 */
-const int initial_MotorPower_for_go_straight = 250;//200; //220;
+const int initial_MotorPower_for_go_straight = 250; //200; //220;
 const int initial_MotorPower_for_turning = 30;
 
 // PID controller
@@ -356,7 +356,7 @@ void motorPIDcontrol()
     }
     else if (PIDvalue < 0)
     {
-        MotorSpeed = initial_MotorPower_for_turning*3 + abs(PIDvalue);
+        MotorSpeed = initial_MotorPower_for_turning * 3 + abs(PIDvalue);
         constrain(MotorSpeed, 0, 255);
 
         left(MotorSpeed);
@@ -364,7 +364,7 @@ void motorPIDcontrol()
     }
     else if (PIDvalue > 0)
     {
-        MotorSpeed = initial_MotorPower_for_turning*3 + abs(PIDvalue);
+        MotorSpeed = initial_MotorPower_for_turning * 3 + abs(PIDvalue);
         constrain(MotorSpeed, 0, 255);
 
         right(MotorSpeed);
