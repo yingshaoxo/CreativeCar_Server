@@ -7,12 +7,21 @@ import math
 from flask import Flask, request, render_template
 from auto_everything.base import Terminal
 t = Terminal()
+print(t.run_command("vcgencmd measure_temp"))
 
 app = Flask(__name__)
 
 State = False
 robot_state = False
 
+try:
+    cap = cv2.VideoCapture(0)
+    w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    cap.set(3, w)
+    cap.set(4, h)
+except Exception as e:
+    print(e)
 
 @app.route('/car', methods=['POST', 'GET'])
 def handle_car_request():
@@ -30,6 +39,7 @@ def handle_car_request():
                     State = True
                 else:
                     t.kill("server.py")
+                    t.run_py("clean.py")
                     # t.kill("tracking.py")
                     print('server has stoped')
                     State = False
@@ -54,7 +64,7 @@ def start_or_stop():
         print('robot has started')
         robot_state = True
     else:
-        t.kill("robot.py")
+        t.kill("robot.py", force=False)
         # t.kill("tracking.py")
         print('robot has stoped')
         robot_state = False
@@ -83,20 +93,16 @@ def effect_of_whitening(frame, whiten_level=5.0):
 
 @app.route('/takepicture', methods=['GET'])
 def take_picture():
+    global cap
     try:
         # You may want to add white_balance here!
-        cap = cv2.VideoCapture(0)
-        w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        cap.set(3, w)
-        cap.set(4, h)
 
         if cap.isOpened():
             _, frame = cap.read()
-            cap.release()  # releasing camera immediately after capturing picture
+            #cap.release()  # releasing camera immediately after capturing picture
             if _ and frame is not None:
-                frame = effect_of_whitening(frame)
-                frame = effect_of_whitening(frame)
+                #frame = effect_of_whitening(frame)
+                #frame = effect_of_whitening(frame)
                 cv2.imwrite('static/picture.jpg', frame)
     except Exception as e:
         print(e)

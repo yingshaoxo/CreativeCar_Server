@@ -15,7 +15,7 @@ int mode = 0;
 const int initial_MotorPower_for_go_straight = 130;
 const int initial_MotorPower_for_turning = 100;
 */
-const int initial_MotorPower_for_go_straight = 200; //220;
+const int initial_MotorPower_for_go_straight = 250; //200; //220;
 const int initial_MotorPower_for_turning = 30;
 
 // PID controller
@@ -356,17 +356,19 @@ void motorPIDcontrol()
     }
     else if (PIDvalue < 0)
     {
-        MotorSpeed = initial_MotorPower_for_turning + abs(PIDvalue);
+        MotorSpeed = initial_MotorPower_for_turning * 3 + abs(PIDvalue);
         constrain(MotorSpeed, 0, 255);
 
-        left_rotate(MotorSpeed, MotorSpeed);
+        left(MotorSpeed);
+        //left_rotate(MotorSpeed, MotorSpeed);
     }
     else if (PIDvalue > 0)
     {
-        MotorSpeed = initial_MotorPower_for_turning + abs(PIDvalue);
+        MotorSpeed = initial_MotorPower_for_turning * 3 + abs(PIDvalue);
         constrain(MotorSpeed, 0, 255);
 
-        right_rotate(MotorSpeed, MotorSpeed);
+        right(MotorSpeed);
+        //right_rotate(MotorSpeed, MotorSpeed);
     }
 }
 
@@ -381,31 +383,6 @@ unsigned int get_live_seconds()
     return millis() / 1000;
 }
 
-/*
-int full_white_report_in_a_second = 0;
-int seconds_for_full_white = 0;
-int temp_seconds_for_full_white = 0;
-int a_full_white_report()
-{
-    full_white_report_in_a_second++;
-
-    temp_seconds_for_full_white = get_live_seconds();
-    if (temp_seconds_for_full_white > seconds_for_full_white)
-    {
-        seconds_for_full_white = temp_seconds_for_full_white;
-        full_white_report_in_a_second = 0;
-    }
-
-    if (full_white_report_in_a_second > 200)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-}
-*/
 int seconds = 0;
 int temp_seconds = 0;
 
@@ -436,8 +413,6 @@ unsigned int a_full_white_report()
         full_white_report_in_a_second = 0;
     }
 
-    //if (full_white_report_in_a_second > 200)
-    //if (full_white_report_in_a_second > 10 && general_report_in_a_second > 10 && (full_white_report_in_a_second / general_report_in_a_second) > 0.8)
     if (general_report_in_a_second > 30 && (full_white_report_in_a_second / general_report_in_a_second) > 0.8)
     {
         return 1;
@@ -563,12 +538,10 @@ void adjust_its_position_to_the_center_by_PID()
     if (left_distance < middle_value)
     {
         error = 0.5;
-        //right(initial_MotorPower_for_go_straight / 2);
     }
     else if (right_distance < middle_value)
     {
         error = -0.5;
-        //left(initial_MotorPower_for_go_straight / 2);
     }
 
     calculatePID();
@@ -638,7 +611,7 @@ void loop()
             // when it goes to the second full white, stop ferever
             stop(100);
             full_white_count++;
-            if (full_white_count >= 2)
+            if (full_white_count >= 1)
             {
                 unsigned int beginning = get_live_seconds();
                 unsigned int current = beginning;
@@ -650,9 +623,11 @@ void loop()
                         break;
                     }
                 }
-                while (1)
-                {
-                    stop(2000);
+                if (full_white_count >= 2) {
+                    while (1)
+                    {
+                        stop(2000);
+                    }
                 }
             }
 
@@ -665,7 +640,7 @@ void loop()
                 adjust_its_position_to_the_center_by_PID();
 
                 current = get_live_seconds();
-                if ((current - beginning) >= 6)
+                if ((current - beginning) >= 4)
                 {
                     update_ABCDEF();
                     if (C == 1 || D == 1) // adjust its position until meets black line

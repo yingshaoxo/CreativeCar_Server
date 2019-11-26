@@ -1,12 +1,12 @@
 import RPi.GPIO as GPIO
 import time
 
-A_pin = 17
-B_pin = 27
-C_pin = 22
-D_pin = 10
-E_pin = 25
-F_pin = 8
+A_pin = 7
+B_pin = 8
+C_pin = 10
+D_pin = 22
+E_pin = 27
+F_pin = 17
 
 GPIO.setmode(GPIO.BCM)
 
