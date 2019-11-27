@@ -4,4 +4,3 @@ t = Terminal()
 
 s.service("test", "./server_control.py")
 print(t.run_command("sudo systemctl unmask test"))
-

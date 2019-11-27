@@ -36,24 +36,37 @@
 </head>
 
 <body>
+    <audio id="audio" src="static/beep.wav" autoplay="false"></audio>
     <img id="my_img" class="center" src="static/picture.jpg">
     <div class="bottom_center">
-        <form action="takepicture" method="GET">
+        <form onclick="playSound();" action="takepicture" method="GET">
             <input type="submit" name="take_picture" value="Take Picture">
         </form>
-            <br>
-            <br>
-            <br>
-            <br>
-        <form action="startorstop" method="GET">
-            <input style="height:200px;width:200px" type="submit" name="start/stop" value="Start/Stop">
-        </form>
+        <br>
+        <br>
+        <br>
+        <br>
+        <button onclick="send_signal(); playSound();" style="height:200px;width:200px" type="submit">Start/Stop</button>
     </div>
 </body>
 
 <script>
     var my_img = document.getElementById("my_img");
     my_img.src = "static/picture.jpg?" + new Date().getTime();
+
+    function playSound() {
+        var sound = document.getElementById("audio");
+        sound.play();
+    }
+
+    function send_signal() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/startorstop", true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify({
+            hi: "hi"
+        }));
+    }
 </script>
 
 </html>

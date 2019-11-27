@@ -23,6 +23,7 @@ try:
 except Exception as e:
     print(e)
 
+
 @app.route('/car', methods=['POST', 'GET'])
 def handle_car_request():
     global State
@@ -55,20 +56,25 @@ def handle_web_request():
     return render_template("index.html")
 
 
-@app.route('/startorstop', methods=['GET'])
+@app.route('/startorstop', methods=['POST'])
 def start_or_stop():
     global robot_state
-    if robot_state == False:
-        t.run_py("robot.py")
-        # t.run_py("tracking.py")
-        print('robot has started')
-        robot_state = True
-    else:
-        t.kill("robot.py", force=False)
-        # t.kill("tracking.py")
-        print('robot has stoped')
-        robot_state = False
-    return render_template("index.html")
+
+    if request.method == 'POST':
+        if robot_state == False:
+            t.run_py("robot.py")
+            print('robot has started')
+            robot_state = True
+        else:
+            if t.run_command("ps x all").count("robot.py") >= 2:
+                t.kill("robot.py", force=True)
+            else:
+                t.kill("robot.py", force=False)
+            print('robot has stoped')
+            robot_state = False
+
+    # return render_template("index.html")
+    return ""
 
 
 def white_balance(img):
@@ -99,7 +105,7 @@ def take_picture():
 
         if cap.isOpened():
             _, frame = cap.read()
-            #cap.release()  # releasing camera immediately after capturing picture
+            # cap.release()  # releasing camera immediately after capturing picture
             if _ and frame is not None:
                 #frame = effect_of_whitening(frame)
                 #frame = effect_of_whitening(frame)

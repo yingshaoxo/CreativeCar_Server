@@ -2,6 +2,7 @@
 import RPi.GPIO as GPIO
 from simple_pid import PID
 import time
+from datetime import datetime
 
 pid = PID(1.3,  # 1,
           0,
@@ -18,10 +19,21 @@ GPIO.setwarnings(False)
 
 # --------------------------------
 # --------------------------------
-# Motor Controlling
+# General Function
 # --------------------------------
 # --------------------------------
 
+
+def constrain(val, min_val, max_val):
+    result = min(max_val, max(min_val, val))
+    return result
+
+
+# --------------------------------
+# --------------------------------
+# Motor Controlling
+# --------------------------------
+# --------------------------------
 # Definition of motor pins
 IN1 = 14
 IN2 = 4
@@ -30,21 +42,23 @@ IN4 = 2
 ENA = 13
 ENB = 12
 
+initial_MotorPower_for_go_straight = 80
+ratio = 1
+initial_MotorPower_for_across_tunnel = 45
+
 
 def initiate_motor():
     global pwm_ENA
     global pwm_ENB
 
-    #GPIO.setup(ENA, GPIO.OUT, initial=GPIO.HIGH)
     GPIO.setup(ENA, GPIO.OUT, initial=GPIO.LOW)
     GPIO.setup(IN1, GPIO.OUT, initial=GPIO.LOW)
     GPIO.setup(IN2, GPIO.OUT, initial=GPIO.LOW)
-    #GPIO.setup(ENB, GPIO.OUT, initial=GPIO.HIGH)
     GPIO.setup(ENB, GPIO.OUT, initial=GPIO.LOW)
     GPIO.setup(IN3, GPIO.OUT, initial=GPIO.LOW)
     GPIO.setup(IN4, GPIO.OUT, initial=GPIO.LOW)
 
-    # Set the PWM pin and frequency is 2000hz
+    # Set the PWM pin and frequency is 1000hz
     pwm_ENA = GPIO.PWM(ENA, 1000)
     pwm_ENB = GPIO.PWM(ENB, 1000)
     pwm_ENA.start(0)
@@ -72,21 +86,34 @@ def back(speed, delaytime=0):
 
 
 def left(speed1, speed2, delaytime=0):
-    time.sleep(delaytime)
     GPIO.output(IN1, GPIO.HIGH)
     GPIO.output(IN2, GPIO.LOW)
-    GPIO.output(IN3, GPIO.HIGH)
-    GPIO.output(IN4, GPIO.LOW)
+
+    if speed2 < 0:
+        GPIO.output(IN3, GPIO.LOW)
+        GPIO.output(IN4, GPIO.HIGH)
+        speed2 = abs(speed2)
+    else:
+        GPIO.output(IN3, GPIO.HIGH)
+        GPIO.output(IN4, GPIO.LOW)
+
     pwm_ENA.ChangeDutyCycle(speed1)
     pwm_ENB.ChangeDutyCycle(speed2)
     time.sleep(delaytime)
 
 
 def right(speed1, speed2, delaytime=0):
-    GPIO.output(IN1, GPIO.HIGH)
-    GPIO.output(IN2, GPIO.LOW)
+    if speed1 < 0:
+        GPIO.output(IN1, GPIO.LOW)
+        GPIO.output(IN2, GPIO.HIGH)
+        speed1 = abs(speed1)
+    else:
+        GPIO.output(IN1, GPIO.HIGH)
+        GPIO.output(IN2, GPIO.LOW)
+
     GPIO.output(IN3, GPIO.HIGH)
     GPIO.output(IN4, GPIO.LOW)
+
     pwm_ENA.ChangeDutyCycle(speed1)
     pwm_ENB.ChangeDutyCycle(speed2)
     time.sleep(delaytime)
@@ -136,13 +163,29 @@ def right_rotate(speed, delaytime=0):
 
 
 def stop(speed=0, delaytime=0):
-    GPIO.output(IN1, GPIO.LOW)
-    GPIO.output(IN2, GPIO.LOW)
-    GPIO.output(IN3, GPIO.LOW)
-    GPIO.output(IN4, GPIO.LOW)
-    pwm_ENA.ChangeDutyCycle(0)
-    pwm_ENB.ChangeDutyCycle(0)
-    time.sleep(delaytime)
+    start_time = datetime.now()
+    while (datetime.now() - start_time).seconds < delaytime:
+        GPIO.output(IN1, GPIO.LOW)
+        GPIO.output(IN2, GPIO.LOW)
+        GPIO.output(IN3, GPIO.LOW)
+        GPIO.output(IN4, GPIO.LOW)
+        pwm_ENA.ChangeDutyCycle(0)
+        pwm_ENB.ChangeDutyCycle(0)
+
+def stop2(speed=0, delaytime=0):
+    start_time = datetime.now()
+
+    diff_in_millisecond = 0
+    while (diff_in_millisecond < delaytime*1000):
+        GPIO.output(IN1, GPIO.LOW)
+        GPIO.output(IN2, GPIO.LOW)
+        GPIO.output(IN3, GPIO.LOW)
+        GPIO.output(IN4, GPIO.LOW)
+        pwm_ENA.ChangeDutyCycle(0)
+        pwm_ENB.ChangeDutyCycle(0)
+
+        diff = (datetime.now() - self.beginning)
+        diff_in_millisecond = (diff.days * 86400000) + (diff.seconds * 1000) + (diff.microseconds / 1000)
 
 # --------------------------------
 # --------------------------------
@@ -184,17 +227,117 @@ def update_ABCDEF():
     D = GPIO.input(D_pin)
     E = GPIO.input(E_pin)
     F = GPIO.input(F_pin)
+    print(f"""
+A: {A}
+B: {B}
+C: {C}
+D: {D}
+E: {E}
+F: {F}
+    """)
+
+# --------------------------------
+# --------------------------------
+# Ultrasonic sensor functions
+# --------------------------------
+# --------------------------------
+
+
+Left_Echo = 21
+Left_Triger = 20
+Right_Echo = 23
+Right_Triger = 24
+
+
+def initiate_ultrasonic_sensor():
+    GPIO.setup(Left_Echo, GPIO.IN)
+    GPIO.setup(Left_Triger, GPIO.OUT)
+    GPIO.setup(Right_Echo, GPIO.IN)
+    GPIO.setup(Right_Triger, GPIO.OUT)
+
+
+def get_left_distance():
+    maxTime = 0.04
+
+    GPIO.output(Left_Triger, False)
+    time.sleep(0.01)
+    GPIO.output(Left_Triger, True)
+    time.sleep(0.00001)
+    GPIO.output(Left_Triger, False)
+
+    pulse_start = time.time()
+    timeout = pulse_start + maxTime
+    while GPIO.input(Left_Echo) == 0 and pulse_start < timeout:
+        pulse_start = time.time()
+
+    pulse_end = time.time()
+    timeout = pulse_end + maxTime
+    while GPIO.input(Left_Echo) == 1 and pulse_end < timeout:
+        pulse_end = time.time()
+
+    pulse_duration = pulse_end - pulse_start
+    distance = pulse_duration * 17000
+    distance = round(distance, 2)
+
+    distance = constrain(distance, 0, 100)
+
+    return distance
+
+
+def get_right_distance():
+    maxTime = 0.04
+
+    GPIO.output(Right_Triger, False)
+    time.sleep(0.01)
+    GPIO.output(Right_Triger, True)
+    time.sleep(0.00001)
+    GPIO.output(Right_Triger, False)
+
+    pulse_start = time.time()
+    timeout = pulse_start + maxTime
+    while GPIO.input(Right_Echo) == 0 and pulse_start < timeout:
+        pulse_start = time.time()
+
+    pulse_end = time.time()
+    timeout = pulse_end + maxTime
+    while GPIO.input(Right_Echo) == 1 and pulse_end < timeout:
+        pulse_end = time.time()
+
+    pulse_duration = pulse_end - pulse_start
+    distance = pulse_duration * 17000
+    distance = round(distance, 2)
+
+    distance = constrain(distance, 0, 100)
+
+    return distance
+
+
+def check_if_we_are_in_tunnel():
+    left_distance = get_left_distance()
+    right_distance = get_right_distance()
+
+    if (left_distance < 50 and right_distance < 50):
+        return 1
+    else:
+        return 0
+
+
+def adjust_its_position_to_the_center():
+    left_distance = get_left_distance()
+    right_distance = get_right_distance()
+
+    middle_value = ((left_distance + right_distance) / 2)
+
+    if (left_distance < middle_value):
+        right(initial_MotorPower_for_across_tunnel, 0)
+    elif (right_distance < middle_value):
+        left(0, initial_MotorPower_for_across_tunnel)
 
 # --------------------------------
 # --------------------------------
 # Automatic Car
 # --------------------------------
 # --------------------------------
-
-
-def constrain(val, min_val, max_val):
-    result = min(max_val, max(min_val, val))
-    return result
 
 
 ALL_BLACK = 0
@@ -204,14 +347,62 @@ ALL_WHITE = 2
 mode = 0
 error = 0
 
-initial_MotorPower_for_go_straight = 40 #40 * 3
-initial_MotorPower_for_turning = 20  # 20  # the speed that just enough for running your car
+
+class Timer:
+    def __init__(self):
+        self.seconds = 0
+        self.temp_seconds = 0
+        self.general_report_in_a_second = 0
+
+        self.full_white_report_in_a_second = 0
+
+        self.beginning = datetime.now()
+
+    def get_real_seconds(self):
+        diff = (datetime.now() - self.beginning)
+        return diff.seconds
+
+    def get_live_seconds(self):
+        diff = (datetime.now() - self.beginning)
+        diff_in_millisecond = (diff.days * 86400000) + (diff.seconds * 1000) + (diff.microseconds / 1000)
+        return diff_in_millisecond // 200
+        """
+        diff = (datetime.now() - self.beginning)
+        return diff.seconds
+        """
+
+    def general_report(self):
+        self.general_report_in_a_second += 1
+
+        self.temp_seconds = self.get_live_seconds()
+        if (self.temp_seconds > self.seconds):
+            self.seconds = self.temp_seconds
+            self.general_report_in_a_second = 0
+            self.full_white_report_in_a_second = 0
+            self.any_black_report_in_a_second = 0
+
+    def a_full_white_report(self):
+        self.full_white_report_in_a_second += 1
+
+        self.temp_seconds = self.get_live_seconds()
+        if (self.temp_seconds > self.seconds):
+            self.seconds = self.temp_seconds
+            self.full_white_report_in_a_second = 0
+
+        if (self.general_report_in_a_second > 30 and (self.full_white_report_in_a_second / self.general_report_in_a_second) > 0.8):
+            return 1
+        else:
+            return 0
 
 
 class AutoCar:
     def __init__(self):
         initiate_motor()
         initiate_line_finding_module()
+        initiate_ultrasonic_sensor()
+
+        self.timer = Timer()
+        self.full_white_count = 0
 
     def update_error(self):
         global mode
@@ -227,19 +418,19 @@ class AutoCar:
         white = 0;
 
         Sensor Array 	Error Value
-        0 0 (0&0) 0 1	 4              
-        0 0 (0&0) 1 1	 3              
-        0 0 (0&0) 1 0	 2              
-        0 0 (0&1) 1 0	 1              
-        0 0 (0&1) 0 0    0.5
+        0 0 (0&0) 0 1	 5              
+        0 0 (0&0) 1 1	 4              
+        0 0 (0&0) 1 0	 3              
+        0 0 (0&1) 1 0	 2              
+        0 0 (0&1) 0 0    1
 
         0 0 (1&1) 0 0	 0              
 
-        0 0 (1&0) 0 0   -0.5
-        0 1 (1&0) 0 0	-1              
-        0 1 (0&0) 0 0	-2              
-        1 1 (0&0) 0 0	-3              
-        1 0 (0&0) 0 0	-4              
+        0 0 (1&0) 0 0   -1
+        0 1 (1&0) 0 0	-2              
+        0 1 (0&0) 0 0	-3              
+        1 1 (0&0) 0 0	-4              
+        1 0 (0&0) 0 0	-5              
 
         1 1 1 1 1        0 full_black
         0 0 0 0 0        0 full_white
@@ -284,7 +475,21 @@ class AutoCar:
             mode = ALL_WHITE
             error = 0
 
-        print(f"got error: {error}")
+        if error != 0:
+            print(f"got error: {error}")
+
+    def update_error_by_ultrasonic_sensor(self):
+        global error
+
+        left_distance = get_left_distance()
+        right_distance = get_right_distance()
+
+        middle_value = ((left_distance + right_distance) / 2)
+
+        if (left_distance < middle_value):
+            error = 3
+        elif (right_distance < middle_value):
+            error = -3
 
     def motor_PID_control(self):
         global error
@@ -299,40 +504,104 @@ class AutoCar:
             go(initial_MotorPower_for_go_straight)
             print(f"Go speed: {initial_MotorPower_for_go_straight}")
         elif (pid_value < 0):
-            MotorSpeed1 = initial_MotorPower_for_go_straight - abs(pid_value)*3
-            MotorSpeed2 = initial_MotorPower_for_go_straight + abs(pid_value)*3
-            MotorSpeed1 = constrain(MotorSpeed1, 0, 100)
+            MotorSpeed1 = initial_MotorPower_for_go_straight - abs(pid_value)*ratio
+            MotorSpeed2 = initial_MotorPower_for_go_straight + abs(pid_value)*ratio
+            MotorSpeed1 = constrain(MotorSpeed1, -100, 100)
             MotorSpeed2 = constrain(MotorSpeed2, 0, 100)
 
             # right_rotate(MotorSpeed)
             right(MotorSpeed1, MotorSpeed2)
             print(f"Right speed: {MotorSpeed1}, {MotorSpeed2}")
         elif (pid_value > 0):
-            MotorSpeed1 = initial_MotorPower_for_go_straight + abs(pid_value)*3
-            MotorSpeed2 = initial_MotorPower_for_go_straight - abs(pid_value)*3
+            MotorSpeed1 = initial_MotorPower_for_go_straight + abs(pid_value)*ratio
+            MotorSpeed2 = initial_MotorPower_for_go_straight - abs(pid_value)*ratio
             MotorSpeed1 = constrain(MotorSpeed1, 0, 100)
-            MotorSpeed2 = constrain(MotorSpeed2, 0, 100)
+            MotorSpeed2 = constrain(MotorSpeed2, -100, 100)
 
             # left_rotate(MotorSpeed)
             left(MotorSpeed1, MotorSpeed2)
             print(f"Left speed: {MotorSpeed1}, {MotorSpeed2}")
 
+    def motor_PID_control_by_ultrasonic_sensor(self):
+        global error
+        global pid
+
+        global A, B, C, D, E, F
+
+        pid_value = pid(error)
+        print(f"PID value: {pid_value}")
+
+        if (round(pid_value) == 0):
+            go(initial_MotorPower_for_go_straight)
+            print(f"Go speed: {initial_MotorPower_for_go_straight}")
+        elif (pid_value < 0):
+            MotorSpeed1 = initial_MotorPower_for_across_tunnel - abs(pid_value)
+            MotorSpeed2 = initial_MotorPower_for_across_tunnel + abs(pid_value)
+            MotorSpeed1 = constrain(MotorSpeed1, -100, 100)
+            MotorSpeed2 = constrain(MotorSpeed2, 0, 100)
+
+            right(MotorSpeed1, MotorSpeed2)
+            print(f"Right speed: {MotorSpeed1}, {MotorSpeed2}")
+        elif (pid_value > 0):
+            MotorSpeed1 = initial_MotorPower_for_across_tunnel + abs(pid_value)
+            MotorSpeed2 = initial_MotorPower_for_across_tunnel - abs(pid_value)
+            MotorSpeed1 = constrain(MotorSpeed1, 0, 100)
+            MotorSpeed2 = constrain(MotorSpeed2, -100, 100)
+
+            left(MotorSpeed1, MotorSpeed2)
+            print(f"Left speed: {MotorSpeed1}, {MotorSpeed2}")
+
     def start_to_drive(self):
         global mode
+        global A, B, C, D, E, F
+        global pid
+        global initial_MotorPower_for_go_straight
+        global initial_MotorPower_for_across_tunnel
 
         while 1:
             update_ABCDEF()
             self.update_error()
 
+            if self.timer.get_real_seconds() > 6:
+               initial_MotorPower_for_go_straight = initial_MotorPower_for_across_tunnel
+
             if mode == ALL_BLACK:
-                stop(1)
+                pass
             elif mode == ALL_WHITE:
-                stop(1)
+                stop(0, 0)
+                self.timer.general_report()
+
+                if (self.timer.a_full_white_report() == 1):
+                    stop(0, 1)
+                    self.full_white_count += 1
+
+                    if (self.full_white_count == 1):
+                        print("We are in tunnel!")
+                        start_point = self.timer.get_real_seconds()
+                        while 1:
+                            self.update_error_by_ultrasonic_sensor()
+                            self.motor_PID_control_by_ultrasonic_sensor()
+
+                            if (self.timer.get_real_seconds() - start_point) >= 2:
+                                update_ABCDEF()
+                                #if (A == 1 or B == 1 or C == 1 or D == 1 or E == 1 or F == 1):
+                                if (C == 1 or D == 1):
+                                    print("We are not in tunnel!")
+                                    stop(0, 1)
+                                    break
+                    elif (self.full_white_count == 2):
+                        print("Finished!")
+                        exit()
+
+                pid.reset()
+
             elif mode == FOLLOWING_LINE:
+                self.timer.general_report()
+
                 self.motor_PID_control()
 
             # time.sleep(1)
-            print("\n\n-------------------------\n\n")
+            # print("\n\n-------------------------\n\n")
 
 
 class Car:
@@ -346,13 +615,11 @@ class Car:
         elif action_name == "back":
             back(speed, time_)
         elif action_name == "left":
-            left(speed, time_)
-            #left_rotate(speed, time_)
+            left_rotate(speed, time_)
         elif action_name == "right":
-            right(speed, time_)
-            #right_rotate(speed, time_)
+            right_rotate(speed, time_)
         elif action_name == "stop":
-            stop(speed, time_)
+            stop2(speed, 1)
 
     def get_away_from_obstacles(self, ratio=1, always=False):
         pass
@@ -374,12 +641,6 @@ class Car:
 
 
 if __name__ == '__main__':
-    """
-    initiate_motor()
-    while 1:
-        left(20)
-    """
-
     auto_car = AutoCar()
     auto_car.start_to_drive()
 
@@ -389,9 +650,9 @@ if __name__ == '__main__':
     while 1:
         update_ABCDEF()
         if (A == 1 and F == 0):
-            left_rotate(30)
+            left_rotate(50)
         elif (A == 0 and F == 1):
-            right_rotate(30)
+            right_rotate(50)
         else:
-            go(30)
+            go(50)
     """
