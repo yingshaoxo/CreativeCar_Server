@@ -42,7 +42,7 @@ IN4 = 2
 ENA = 13
 ENB = 12
 
-initial_MotorPower_for_go_straight = 100
+initial_MotorPower_for_go_straight = 70
 ratio = 3
 initial_MotorPower_for_across_tunnel = 50
 

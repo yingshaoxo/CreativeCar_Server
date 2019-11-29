@@ -42,9 +42,9 @@ IN4 = 2
 ENA = 13
 ENB = 12
 
-initial_MotorPower_for_go_straight = 70 
+initial_MotorPower_for_go_straight = 70
 ratio = 1.5
-initial_MotorPower_for_across_tunnel = 50
+initial_MotorPower_for_across_tunnel = 45
 
 
 def initiate_motor():
@@ -171,7 +171,6 @@ def stop(speed=0, delaytime=0):
         GPIO.output(IN4, GPIO.LOW)
         pwm_ENA.ChangeDutyCycle(0)
         pwm_ENB.ChangeDutyCycle(0)
-
 
 def stop2(speed=0, delaytime=0):
     start_time = datetime.now()
@@ -396,48 +395,6 @@ class Timer:
             return 0
 
 
-class Counter:
-    def __init__(self):
-        self.dict = {}
-
-    def _get_time_difference_in_milliseconds(self, new, old):
-        diff = (new - old)
-        diff_in_millisecond = (diff.days * 86400000) + (diff.seconds * 1000) + (diff.microseconds / 1000)
-        return diff_in_millisecond
-
-    def count(self, name, value, time_inverval, chance_of_showing):
-        date_of_now = datetime.now()
-
-        if name in self.dict:
-            self.dict[name].update({
-                date_of_now: value
-            })
-
-            out_of_date_items = []
-            for key in self.dict[name]:
-                if (self._get_time_difference_in_milliseconds(date_of_now, key) > time_inverval):
-                    out_of_date_items.append(key)
-
-            for key in out_of_date_items:
-                del self.dict[name][key]
-
-            if out_of_date_items != []:
-                all_values = list(self.dict[name].values())
-                possibility = all_values.count(value)/len(all_values)
-
-                if possibility >= chance_of_showing:
-                    return 1
-                else:
-                    return 0
-
-        elif name not in self.dict:
-            self.dict.update({
-                name: {date_of_now: value}
-            })
-
-        return 0
-
-
 class AutoCar:
     def __init__(self):
         initiate_motor()
@@ -446,8 +403,6 @@ class AutoCar:
 
         self.timer = Timer()
         self.full_white_count = 0
-
-        self.counter = Counter()
 
     def update_error(self):
         global mode
@@ -607,55 +562,33 @@ class AutoCar:
             update_ABCDEF()
             self.update_error()
 
-            if self.timer.get_real_seconds() >= 8:
-                initial_MotorPower_for_go_straight = initial_MotorPower_for_across_tunnel
+            if self.timer.get_real_seconds() > 6:
+               initial_MotorPower_for_go_straight = initial_MotorPower_for_across_tunnel
 
             if mode == ALL_BLACK:
-                stop(0, 0)
+                pass
             elif mode == ALL_WHITE:
                 stop(0, 0)
                 self.timer.general_report()
 
-                if (self.timer.a_full_white_report() == 1 and (check_if_we_are_in_tunnel() == 1 or self.full_white_count == 1)):
+                if (self.timer.a_full_white_report() == 1):
                     stop(0, 1)
                     self.full_white_count += 1
 
                     if (self.full_white_count == 1):
                         print("We are in tunnel!")
+                        start_point = self.timer.get_real_seconds()
                         while 1:
                             self.update_error_by_ultrasonic_sensor()
                             self.motor_PID_control_by_ultrasonic_sensor()
 
-                            we_are_in_tunnel = check_if_we_are_in_tunnel()
-                            if we_are_in_tunnel == 1:
-                                self.counter.count("tunnel_detection", 1, 100, 0.6)
-                            elif we_are_in_tunnel == 0:
-                                result = self.counter.count("tunnel_detection", 0, 100, 0.6)
-                                if result == 1:
+                            if (self.timer.get_real_seconds() - start_point) >= 2:
+                                update_ABCDEF()
+                                #if (A == 1 or B == 1 or C == 1 or D == 1 or E == 1 or F == 1):
+                                if (C == 1 or D == 1):
                                     print("We are not in tunnel!")
-                                    find_black_line = 0
-                                    start_point = self.timer.get_real_seconds()
-                                    left_right_flag = 1
-                                    while (find_black_line == 0):
-                                        if (self.timer.get_real_seconds() - start_point) >= 1:
-                                            start_point = self.timer.get_real_seconds()
-                                            left_right_flag = left_right_flag * -1
-                                        else:
-                                            if left_right_flag == 1:
-                                                left_rotate(initial_MotorPower_for_across_tunnel)
-                                            else:
-                                                right_rotate(initial_MotorPower_for_across_tunnel)
-                                        update_ABCDEF()
-                                        # if (A == 1 or B == 1 or C == 1 or D == 1 or E == 1 or F == 1):
-                                        if (C == 1 or D == 1):
-                                            print("We got the black line again!")
-                                            find_black_line = 1
-                                            stop(0, 1)
-                                            break
-                                    if (find_black_line == 1):
-                                        initial_MotorPower_for_go_straight = 50
-                                        break
-
+                                    stop(0, 1)
+                                    break
                     elif (self.full_white_count == 2):
                         print("Finished!")
                         exit()
