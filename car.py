@@ -42,9 +42,9 @@ IN4 = 2
 ENA = 13
 ENB = 12
 
-initial_MotorPower_for_go_straight = 70 
-ratio = 1.5
-initial_MotorPower_for_across_tunnel = 50
+initial_MotorPower_for_go_straight = 50
+ratio = 3
+initial_MotorPower_for_across_tunnel = 40
 
 
 def initiate_motor():
@@ -551,7 +551,7 @@ class AutoCar:
         elif (pid_value < 0):
             MotorSpeed1 = initial_MotorPower_for_go_straight - abs(pid_value)*ratio
             MotorSpeed2 = initial_MotorPower_for_go_straight + abs(pid_value)*ratio
-            MotorSpeed1 = constrain(MotorSpeed1, -100, 100)
+            MotorSpeed1 = constrain(MotorSpeed1, 0, 100)
             MotorSpeed2 = constrain(MotorSpeed2, 0, 100)
 
             # right_rotate(MotorSpeed)
@@ -561,7 +561,7 @@ class AutoCar:
             MotorSpeed1 = initial_MotorPower_for_go_straight + abs(pid_value)*ratio
             MotorSpeed2 = initial_MotorPower_for_go_straight - abs(pid_value)*ratio
             MotorSpeed1 = constrain(MotorSpeed1, 0, 100)
-            MotorSpeed2 = constrain(MotorSpeed2, -100, 100)
+            MotorSpeed2 = constrain(MotorSpeed2, 0, 100)
 
             # left_rotate(MotorSpeed)
             left(MotorSpeed1, MotorSpeed2)
@@ -582,7 +582,7 @@ class AutoCar:
         elif (pid_value < 0):
             MotorSpeed1 = initial_MotorPower_for_across_tunnel - abs(pid_value)
             MotorSpeed2 = initial_MotorPower_for_across_tunnel + abs(pid_value)
-            MotorSpeed1 = constrain(MotorSpeed1, -100, 100)
+            MotorSpeed1 = constrain(MotorSpeed1, 0, 100)
             MotorSpeed2 = constrain(MotorSpeed2, 0, 100)
 
             right(MotorSpeed1, MotorSpeed2)
@@ -591,7 +591,7 @@ class AutoCar:
             MotorSpeed1 = initial_MotorPower_for_across_tunnel + abs(pid_value)
             MotorSpeed2 = initial_MotorPower_for_across_tunnel - abs(pid_value)
             MotorSpeed1 = constrain(MotorSpeed1, 0, 100)
-            MotorSpeed2 = constrain(MotorSpeed2, -100, 100)
+            MotorSpeed2 = constrain(MotorSpeed2, 0, 100)
 
             left(MotorSpeed1, MotorSpeed2)
             print(f"Left speed: {MotorSpeed1}, {MotorSpeed2}")
@@ -628,16 +628,28 @@ class AutoCar:
 
                             we_are_in_tunnel = check_if_we_are_in_tunnel()
                             if we_are_in_tunnel == 1:
-                                self.counter.count("tunnel_detection", 1, 100, 0.6)
+                                self.counter.count("tunnel_detection", 1, 200, 0.8)
                             elif we_are_in_tunnel == 0:
-                                result = self.counter.count("tunnel_detection", 0, 100, 0.6)
+                                result = self.counter.count("tunnel_detection", 0, 200, 0.8)
                                 if result == 1:
                                     print("We are not in tunnel!")
                                     find_black_line = 0
                                     start_point = self.timer.get_real_seconds()
                                     left_right_flag = 1
+                                    times = 0
                                     while (find_black_line == 0):
-                                        if (self.timer.get_real_seconds() - start_point) >= 1:
+                                        if left_right_flag == 1:
+                                            timeout = 1
+                                        else:
+                                            timeout = 2
+
+                                        times += 1
+                                        if times == 4:
+                                            times = 0
+                                            left_right_flag = 1
+                                            timeout = 1
+
+                                        if (self.timer.get_real_seconds() - start_point) >= timeout:
                                             start_point = self.timer.get_real_seconds()
                                             left_right_flag = left_right_flag * -1
                                         else:
@@ -653,7 +665,7 @@ class AutoCar:
                                             stop(0, 1)
                                             break
                                     if (find_black_line == 1):
-                                        initial_MotorPower_for_go_straight = 50
+                                        initial_MotorPower_for_go_straight = initial_MotorPower_for_across_tunnel
                                         break
 
                     elif (self.full_white_count == 2):
@@ -712,6 +724,14 @@ if __name__ == '__main__':
     auto_car.start_to_drive()
 
     """
+    initiate_ultrasonic_sensor()
+    while 1:
+        left_distance = get_left_distance()
+        right_distance = get_right_distance()
+        print(left_distance, right_distance)
+    """
+
+    """
     initiate_motor()
     initiate_line_finding_module()
     while 1:
@@ -723,3 +743,4 @@ if __name__ == '__main__':
         else:
             go(50)
     """
+

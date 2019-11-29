@@ -42,9 +42,9 @@ IN4 = 2
 ENA = 13
 ENB = 12
 
-initial_MotorPower_for_go_straight = 70 
-ratio = 1.5
-initial_MotorPower_for_across_tunnel = 50
+initial_MotorPower_for_go_straight = 50#70 
+ratio = 3#1.5
+initial_MotorPower_for_across_tunnel = 30#50
 
 
 def initiate_motor():
@@ -636,8 +636,20 @@ class AutoCar:
                                     find_black_line = 0
                                     start_point = self.timer.get_real_seconds()
                                     left_right_flag = 1
+                                    times = 0
                                     while (find_black_line == 0):
-                                        if (self.timer.get_real_seconds() - start_point) >= 1:
+                                        if left_right_flag == 1:
+                                            timeout = 1
+                                        else:
+                                            timeout = 2
+
+                                        times += 1
+                                        if times == 4:
+                                            times = 0
+                                            left_right_flag = 1
+                                            timeout = 1
+
+                                        if (self.timer.get_real_seconds() - start_point) >= timeout:
                                             start_point = self.timer.get_real_seconds()
                                             left_right_flag = left_right_flag * -1
                                         else:
