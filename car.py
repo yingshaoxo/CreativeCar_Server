@@ -119,29 +119,6 @@ def right(speed1, speed2, delaytime=0):
     time.sleep(delaytime)
 
 
-"""
-def left(speed, delaytime=0):
-    time.sleep(delaytime)
-    GPIO.output(IN1, GPIO.HIGH)
-    GPIO.output(IN2, GPIO.LOW)
-    GPIO.output(IN3, GPIO.LOW)
-    GPIO.output(IN4, GPIO.LOW)
-    pwm_ENA.ChangeDutyCycle(speed)
-    pwm_ENB.ChangeDutyCycle(speed)
-    time.sleep(delaytime)
-
-
-def right(speed, delaytime=0):
-    GPIO.output(IN1, GPIO.LOW)
-    GPIO.output(IN2, GPIO.LOW)
-    GPIO.output(IN3, GPIO.HIGH)
-    GPIO.output(IN4, GPIO.LOW)
-    pwm_ENA.ChangeDutyCycle(speed)
-    pwm_ENB.ChangeDutyCycle(speed)
-    time.sleep(delaytime)
-"""
-
-
 def left_rotate(speed, delaytime=0):
     GPIO.output(IN1, GPIO.HIGH)
     GPIO.output(IN2, GPIO.LOW)
@@ -602,6 +579,7 @@ class AutoCar:
         global pid
         global initial_MotorPower_for_go_straight
         global initial_MotorPower_for_across_tunnel
+        global ratio
 
         while 1:
             update_ABCDEF()
@@ -609,6 +587,8 @@ class AutoCar:
 
             if self.timer.get_real_seconds() >= 8:
                 initial_MotorPower_for_go_straight = initial_MotorPower_for_across_tunnel
+
+                ratio = 1.5
 
             if mode == ALL_BLACK:
                 stop(0, 0)
@@ -634,38 +614,45 @@ class AutoCar:
                                 if result == 1:
                                     print("We are not in tunnel!")
                                     find_black_line = 0
-                                    start_point = self.timer.get_real_seconds()
                                     left_right_flag = 1
                                     times = 0
                                     while (find_black_line == 0):
                                         if left_right_flag == 1:
-                                            timeout = 1
+                                            timeout = 0.6 * 1000
                                         else:
-                                            timeout = 2
+                                            timeout = 0.6 * 2 * 1000
+
+                                        if left_right_flag == 1:
+                                            start_point = datetime.now()
+                                            while(self.counter._get_time_difference_in_milliseconds(datetime.now(), start_point) < timeout):
+                                                left_rotate(initial_MotorPower_for_across_tunnel)
+                                                update_ABCDEF()
+                                                if (C == 1 or D == 1):
+                                                    print("We got the black line again!")
+                                                    find_black_line = 1
+                                                    stop(0, 1)
+                                                    break
+                                        else:
+                                            start_point = datetime.now()
+                                            while(self.counter._get_time_difference_in_milliseconds(datetime.now(), start_point) < timeout):
+                                                right_rotate(initial_MotorPower_for_across_tunnel)
+                                                update_ABCDEF()
+                                                if (C == 1 or D == 1):
+                                                    print("We got the black line again!")
+                                                    find_black_line = 1
+                                                    stop(0, 1)
+                                                    break
+
+                                        left_right_flag = left_right_flag * -1
 
                                         times += 1
-                                        if times == 4:
-                                            times = 0
-                                            left_right_flag = 1
-                                            timeout = 1
-
-                                        if (self.timer.get_real_seconds() - start_point) >= timeout:
-                                            start_point = self.timer.get_real_seconds()
-                                            left_right_flag = left_right_flag * -1
-                                        else:
-                                            if left_right_flag == 1:
-                                                left_rotate(initial_MotorPower_for_across_tunnel)
-                                            else:
-                                                right_rotate(initial_MotorPower_for_across_tunnel)
-                                        update_ABCDEF()
-                                        # if (A == 1 or B == 1 or C == 1 or D == 1 or E == 1 or F == 1):
-                                        if (C == 1 or D == 1):
-                                            print("We got the black line again!")
-                                            find_black_line = 1
-                                            stop(0, 1)
+                                        if times == 3:
+                                            #left_right_flag = 1
+                                            #times = 0
                                             break
                                     if (find_black_line == 1):
                                         initial_MotorPower_for_go_straight = initial_MotorPower_for_across_tunnel
+                                        ratio = 3
                                         break
 
                     elif (self.full_white_count == 2):
@@ -744,3 +731,44 @@ if __name__ == '__main__':
             go(50)
     """
 
+    """
+    self = AutoCar()
+
+    find_black_line = 0
+    left_right_flag = 1
+    times = 0
+    while (find_black_line == 0):
+        if left_right_flag == 1:
+            timeout = 0.5 * 1000
+        else:
+            timeout = 0.5 * 2 * 1000
+
+        if left_right_flag == 1:
+            start_point = datetime.now()
+            while(self.counter._get_time_difference_in_milliseconds(datetime.now(), start_point) < timeout):
+                left_rotate(initial_MotorPower_for_across_tunnel)
+                update_ABCDEF()
+                if (C == 1 or D == 1):
+                    print("We got the black line again!")
+                    find_black_line = 1
+                    stop(0, 1)
+                    break
+        else:
+            start_point = datetime.now()
+            while(self.counter._get_time_difference_in_milliseconds(datetime.now(), start_point) < timeout):
+                right_rotate(initial_MotorPower_for_across_tunnel)
+                update_ABCDEF()
+                if (C == 1 or D == 1):
+                    print("We got the black line again!")
+                    find_black_line = 1
+                    stop(0, 1)
+                    break
+
+        left_right_flag = left_right_flag * -1
+
+        times += 1
+        if times == 3:
+            #left_right_flag = 1
+            #times = 0
+            break
+    """
