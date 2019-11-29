@@ -66,10 +66,12 @@ def start_or_stop():
             print('robot has started')
             robot_state = True
         else:
-            if t.run_command("ps x all").count("robot.py") >= 2:
-                t.kill("robot.py", force=True)
-            else:
-                t.kill("robot.py", force=False)
+            #if t.run_command("ps x all").count("robot.py") >= 2:
+            #    t.kill("robot.py", force=True)
+            #else:
+            #    t.kill("robot.py", force=False)
+            t.kill("robot.py", force=True)
+            t.run_py("reset_pins.py")
             print('robot has stoped')
             robot_state = False
 
