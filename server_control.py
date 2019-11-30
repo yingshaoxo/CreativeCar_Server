@@ -3,8 +3,10 @@
 import cv2
 import numpy as np
 import math
+from datetime import datetime
+import os
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect
 from auto_everything.base import Terminal
 t = Terminal()
 print(t.run_command("vcgencmd measure_temp"))
@@ -53,7 +55,25 @@ def handle_car_request():
 
 @app.route('/', methods=['GET'])
 def handle_web_request():
-    return render_template("index.html")
+    jpg_file_list = list(reversed([i for i in sorted(filter(os.path.isfile, ["./static/"+f for f in os.listdir("./static")]), key=os.path.getmtime) if i[-4:] == ".jpg"]))
+    #print(f"origin: {jpg_file_list}")
+
+    file_to_remove = jpg_file_list[10:]
+    #print(f"file_to_remove: {file_to_remove}")
+    jpg_file_list = jpg_file_list[:10]
+    #print(f"remaining: {jpg_file_list}")
+    for file_ in file_to_remove:
+        os.remove(f"{file_}")
+
+    my_items = []
+    for index, file_ in enumerate(jpg_file_list):
+        my_items.append({
+            "index":  index,
+            "name": file_[9:]
+        })
+
+    print(f"my_items: {my_items}")
+    return render_template("index.html", items=my_items)
 
 
 @app.route('/startorstop', methods=['POST'])
@@ -66,10 +86,6 @@ def start_or_stop():
             print('robot has started')
             robot_state = True
         else:
-            #if t.run_command("ps x all").count("robot.py") >= 2:
-            #    t.kill("robot.py", force=True)
-            #else:
-            #    t.kill("robot.py", force=False)
             t.kill("robot.py", force=True)
             t.run_py("reset_pins.py")
             print('robot has stoped')
@@ -111,10 +127,10 @@ def take_picture():
             if _ and frame is not None:
                 #frame = effect_of_whitening(frame)
                 #frame = effect_of_whitening(frame)
-                cv2.imwrite('static/picture.jpg', frame)
+                cv2.imwrite(f'static/{datetime.now().strftime("%s")}.jpg', frame)
     except Exception as e:
         print(e)
-    return render_template("index.html")
+    return redirect("/")
 
 
 if __name__ == '__main__':

@@ -44,6 +44,7 @@ ENB = 12
 
 initial_MotorPower_for_go_straight = 50
 ratio = 3
+near_tunnel_ratio = 0.7
 initial_MotorPower_for_across_tunnel = 40
 
 
@@ -141,17 +142,6 @@ def right_rotate(speed, delaytime=0):
 
 def stop(speed=0, delaytime=0):
     start_time = datetime.now()
-    while (datetime.now() - start_time).seconds < delaytime:
-        GPIO.output(IN1, GPIO.LOW)
-        GPIO.output(IN2, GPIO.LOW)
-        GPIO.output(IN3, GPIO.LOW)
-        GPIO.output(IN4, GPIO.LOW)
-        pwm_ENA.ChangeDutyCycle(0)
-        pwm_ENB.ChangeDutyCycle(0)
-
-
-def stop2(speed=0, delaytime=0):
-    start_time = datetime.now()
 
     diff_in_millisecond = 0
     while (diff_in_millisecond < delaytime*1000):
@@ -162,7 +152,7 @@ def stop2(speed=0, delaytime=0):
         pwm_ENA.ChangeDutyCycle(0)
         pwm_ENB.ChangeDutyCycle(0)
 
-        diff = (datetime.now() - self.beginning)
+        diff = (datetime.now() - start_time)
         diff_in_millisecond = (diff.days * 86400000) + (diff.seconds * 1000) + (diff.microseconds / 1000)
 
 # --------------------------------
@@ -579,7 +569,7 @@ class AutoCar:
         global pid
         global initial_MotorPower_for_go_straight
         global initial_MotorPower_for_across_tunnel
-        global ratio
+        global ratio, near_tunnel_ratio
 
         while 1:
             update_ABCDEF()
@@ -588,12 +578,11 @@ class AutoCar:
             if self.timer.get_real_seconds() >= 8:
                 initial_MotorPower_for_go_straight = initial_MotorPower_for_across_tunnel
 
-                ratio = 1.5
+                ratio = near_tunnel_ratio
 
             if mode == ALL_BLACK:
-                stop(0, 0)
+                pass
             elif mode == ALL_WHITE:
-                stop(0, 0)
                 self.timer.general_report()
 
                 if (self.timer.a_full_white_report() == 1 and (check_if_we_are_in_tunnel() == 1 or self.full_white_count == 1)):
@@ -608,11 +597,17 @@ class AutoCar:
 
                             we_are_in_tunnel = check_if_we_are_in_tunnel()
                             if we_are_in_tunnel == 1:
-                                self.counter.count("tunnel_detection", 1, 200, 0.8)
+                                self.counter.count("tunnel_detection", 1, 100, 0.9)
                             elif we_are_in_tunnel == 0:
-                                result = self.counter.count("tunnel_detection", 0, 200, 0.8)
+                                result = self.counter.count("tunnel_detection", 0, 100, 0.9)
                                 if result == 1:
                                     print("We are not in tunnel!")
+
+                                    start_point = datetime.now()
+                                    while(self.counter._get_time_difference_in_milliseconds(datetime.now(), start_point) < 500):
+                                        back(initial_MotorPower_for_across_tunnel//1.5)
+                                    stop(0, 0.2)
+
                                     find_black_line = 0
                                     left_right_flag = 1
                                     times = 0
@@ -625,7 +620,7 @@ class AutoCar:
                                         if left_right_flag == 1:
                                             start_point = datetime.now()
                                             while(self.counter._get_time_difference_in_milliseconds(datetime.now(), start_point) < timeout):
-                                                left_rotate(initial_MotorPower_for_across_tunnel)
+                                                left_rotate(initial_MotorPower_for_across_tunnel//1.5)
                                                 update_ABCDEF()
                                                 if (C == 1 or D == 1):
                                                     print("We got the black line again!")
@@ -635,7 +630,7 @@ class AutoCar:
                                         else:
                                             start_point = datetime.now()
                                             while(self.counter._get_time_difference_in_milliseconds(datetime.now(), start_point) < timeout):
-                                                right_rotate(initial_MotorPower_for_across_tunnel)
+                                                right_rotate(initial_MotorPower_for_across_tunnel//1.5)
                                                 update_ABCDEF()
                                                 if (C == 1 or D == 1):
                                                     print("We got the black line again!")
@@ -685,7 +680,7 @@ class Car:
         elif action_name == "right":
             right_rotate(speed, time_)
         elif action_name == "stop":
-            stop2(speed, 1)
+            stop(speed, 0.1)
 
     def get_away_from_obstacles(self, ratio=1, always=False):
         pass
@@ -729,46 +724,4 @@ if __name__ == '__main__':
             right_rotate(50)
         else:
             go(50)
-    """
-
-    """
-    self = AutoCar()
-
-    find_black_line = 0
-    left_right_flag = 1
-    times = 0
-    while (find_black_line == 0):
-        if left_right_flag == 1:
-            timeout = 0.5 * 1000
-        else:
-            timeout = 0.5 * 2 * 1000
-
-        if left_right_flag == 1:
-            start_point = datetime.now()
-            while(self.counter._get_time_difference_in_milliseconds(datetime.now(), start_point) < timeout):
-                left_rotate(initial_MotorPower_for_across_tunnel)
-                update_ABCDEF()
-                if (C == 1 or D == 1):
-                    print("We got the black line again!")
-                    find_black_line = 1
-                    stop(0, 1)
-                    break
-        else:
-            start_point = datetime.now()
-            while(self.counter._get_time_difference_in_milliseconds(datetime.now(), start_point) < timeout):
-                right_rotate(initial_MotorPower_for_across_tunnel)
-                update_ABCDEF()
-                if (C == 1 or D == 1):
-                    print("We got the black line again!")
-                    find_black_line = 1
-                    stop(0, 1)
-                    break
-
-        left_right_flag = left_right_flag * -1
-
-        times += 1
-        if times == 3:
-            #left_right_flag = 1
-            #times = 0
-            break
     """
